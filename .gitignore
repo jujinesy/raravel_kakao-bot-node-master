@@ -1,0 +1,16 @@
+node_modules
+package-lock.json
+.git
+.*.swp
+
+*.db
+*/**/*.db
+
+node-kakao
+config.json
+test
+.logs
+yarn.lock
+yarn-error.log
+chat-stack.json
+hide-stack.json

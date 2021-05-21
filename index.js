@@ -9,27 +9,16 @@ const axios = require('axios');
 const BSON = require('bson');
 const consola = require('consola');
 const nodemailer = require('nodemailer');
-const { KakaoLink } = require('kaling.js');
 
 // custom modules
-//const Kaling = require('./modules/kaling.js');
+const Kaling = require('./modules/kaling.js');
 const kakao = require('node-kakao');
 const M = require('./modules/common.js');
 const dnsPromise = dns.promises;
 const searchIndent = require('./modules/indent.js');
 const searchAnswer = require('./modules/answer.js');
-const ImageAnal = require('./modules/ocr.js');
 require('./modules/polling.js');
 
-if ( !fs.existsSync('./chat-stack.json') ) {
-	fs.writeFileSync('./chat-stack.json', '{}', { encoding: 'utf8' });
-}
-if ( !fs.existsSync('./hide-stack.json') ) {
-	fs.writeFileSync('./hide-stack.json', '{}', { encoding: 'utf8' });
-}
-global.chatStack = require('./chat-stack.json');
-global.hideStack = require('./hide-stack.json');
-const CHAT_REQ_NUM = 100;
 
 
 // global defins
@@ -38,9 +27,9 @@ const Long = BSON.Long;
 const commandList = require('./modules/cmd.js');
 consola.info('Device UUID', config.duuid);
 let client = null;
-global.ROOT_DIR = __dirname;
 
 consola.info('설정 파일을 읽습니다.');
+
 
 const sendGmail = (param) => {
 	const transOption = {
@@ -134,9 +123,6 @@ const checkInValidLink = async (text) => {
 						consola.error('허용되지 않은 Url 입니다.');
 						return turl;
 					}
-				} else {
-					consola.error('허용되지 않은 Url 입니다.');
-					return turl;
 				}
 			} catch(err) {
 				consola.error(err);
@@ -204,29 +190,8 @@ const kakaoLogin = (email, passwd, deviceUUID, name) => {
 	});
 }
 
-const chatRecord = (sender, chat) => {
-	const id = sender.user.id.toString();
-	let record = chatStack[id];
-	/* 채팅 횟수 기록 */
-	if ( record === undefined ) {
-		record = chatStack[id] = {
-			chatCount: 1,
-			name: sender.memberStruct.nickname,
-			lastChatDate: new Date().toString(),
-			firstChatDate: new Date().toString(),
-		};
-	} else {
-		record.chatCount += 1;
-		record.lastChatDate = new Date().toString();
-		record.name = sender.memberStruct.nickname;
-	}
-	return record;
-}
-
 (async () => {
 	const res = await kakaoLogin(config.email, config.passwd, config.duuid, config.name);
-	global.kaling = new KakaoLink(config.api.kaling, 'https://sopia-bot.github.io');
-	await global.kaling.login(config.email, config.passwd);
 
 	consola.success(`${client.clientUser.mainUserInfo.settings.nickName}(${client.clientUser.id.toString()}) 로 로그인하였습니다.`);
 
@@ -298,12 +263,10 @@ const chatRecord = (sender, chat) => {
                     chat.channel.sendText(`방 ${chat.channel.openLink.linkStruct.linkName} (${chat.channel.id}) 를 정상 해지했습니다.`);
                     consola.success(`방 ${chat.channel.openLink.linkStruct.linkName} (${chat.channel.id}) 를 정상 해지했습니다.`);
                 });
-        } else if ( chat.text.indexOf("!공지") === 0 ) {
+        } else if ( chat.text === "!공지" ) {
 			const notice = chat.text.split(' ')[1];
-			const chid = chat.channel.Id.toString();
-			config.notice[chid] = notice;
+			config.notice.id = notice;
 			fs.writeFileSync('config.json', JSON.stringify(config, null, '\t'), { encoding: 'utf8' });
-			console.log(`공지 채널 ${chid} ID ${notice}를 등록하였습니다.`);
 			return;
         }
 
@@ -311,20 +274,10 @@ const chatRecord = (sender, chat) => {
 			return;
 		}
 
-		if ( chat instanceof kakao.SinglePhotoChat ) {
-			const photo = chat.attachmentList[0];
-			const t = await ImageAnal(photo);
-			if ( t ) {
-				chat.text = t;
-			}
-		}
-
 		const senderInfo = chat.Channel.getUserInfo(chat.Sender);
 		const senderStruct = senderInfo.memberStruct;
-		const senderId = senderInfo.user.id.toString();
 
-		const record = chatRecord(senderInfo, chat);
-		console.log(`[${chat.LogId}]${senderStruct.nickname}(${senderId}): ${chat.text}`);
+		console.log(`${senderStruct.nickname}(${senderInfo.user.id.toString()}): ${chat.text}`);
 
 		if ( chat.mentionMap.size > 0 ) {
 			for ( let [id, mention] of chat.mentionMap ) {
@@ -340,85 +293,67 @@ const chatRecord = (sender, chat) => {
 			}
 		}
 
-		if ( record.chatCount >= CHAT_REQ_NUM ) {
-			consola.info('채팅이 100회 이상인 유저입니다. 광고 주소 검사를 진행하지 않습니다.');
-		} else {
-			let invalidUrl = await checkInValidLink(chat.text);
-			if ( !invalidUrl ) {
-				if ( chat instanceof kakao.CustomChat ) {
-					if ( client.clientUser.id.toString() !== senderInfo.user.id.toString() ) {
-						invalidUrl = true;
-					}
+		let invalidUrl = await checkInValidLink(chat.text);
+		if ( !invalidUrl ) {
+			if ( chat instanceof kakao.CustomChat ) {
+				if ( client.clientUser.id.toString() !== senderInfo.user.id.toString() ) {
+					invalidUrl = true;
 				}
 			}
-			if ( invalidUrl ) {
-				const invalidUrlLen = invalidUrl.length;
-				const hideLen = Math.ceil(invalidUrlLen * 0.4);
-				let hideUrl = "";
-				for ( let i=0;i<invalidUrlLen;i++ ) {
-					if ( i < hideLen ) {
-						if ( invalidUrl[i] !== '.' ) {
-							hideUrl += 'x';
-							continue;
-						}
-					}
-					if ( i < invalidUrlLen - 1 ) {
-						hideUrl += invalidUrl[i];
-					} else {
+		}
+		if ( invalidUrl ) {
+			const invalidUrlLen = invalidUrl.length;
+			const hideLen = Math.ceil(invalidUrlLen * 0.4);
+			let hideUrl = "";
+			for ( let i=0;i<invalidUrlLen;i++ ) {
+				if ( i < hideLen ) {
+					if ( invalidUrl[i] !== '.' ) {
 						hideUrl += 'x';
+						continue;
 					}
 				}
-
-				try {
-					const sender = chat.channel.userInfoMap.get(chat.sender.id.toString()).memberStruct;
-					global.hideStack.unshift({
-						id: chat.LogId.toString(),
-						date: new Date().toJSON(),
-						author: {
-							id: chat.sender.id.toString(),
-							nickname: sender.nickname,
-						},
-						message: chat.text,
-						rm: false,
-					});
-					if ( global.hideStack.length > 30 ) {
-						global.hideStack.pop();
-					}
-					chat.channel.sendText(`[${sender.nickname}]님이 전송하신 메시지중에 허가되지 않은 주소가 있습니다.\n가리기 및 강제퇴장을 시도합니다.\n\n${hideUrl}`);
-					consola.log(`[${sender.nickname}]님이 전송하신 메시지중에 허가되지 않은 주소가 있습니다.\n가리기 및 강제퇴장을 시도합니다.`);
-					consola.log(`${chat.text}\n\n`);
-					psleep(1000);
-					result = await chat.hide();
-					if ( result ) {
-						result = await chat.channel.kickMember(chat.sender);
-						if ( result ) {
-							chat.channel.sendText('성공했습니다.');
-						} else {
-							chat.channel.sendText('실패했습니다.\n3회 더 시도합니다.');
-
-							for ( let i=0;i<3;i++ ) {
-								result = await chat.channel.kickMember(chat.sender);
-								if ( result ) {
-									chat.channel.sendText('성공했습니다.');
-									return;
-								}
-								await psleep(1000);
-							}
-							chat.channel.sendText('실패했습니다.');
-						}
-					}
-				} catch(err) {
-					consola.error(err);
+				if ( i < invalidUrlLen - 1 ) {
+					hideUrl += invalidUrl[i];
+				} else {
+					hideUrl += 'x';
 				}
-				return;
 			}
+
+			try {
+				const sender = chat.channel.userInfoMap.get(chat.sender.id.toString()).memberStruct;
+				chat.channel.sendText(`[${sender.nickname}]님이 전송하신 메시지중에 허가되지 않은 주소가 있습니다.\n가리기 및 강제퇴장을 시도합니다.\n\n${hideUrl}`);
+				consola.log(`[${sender.nickname}]님이 전송하신 메시지중에 허가되지 않은 주소가 있습니다.\n가리기 및 강제퇴장을 시도합니다.`);
+				consola.log(`${chat.text}\n\n`);
+				result = await chat.channel.hideChat(chat);
+				if ( result ) {
+					result = await chat.channel.kickMember(chat.sender);
+					if ( result ) {
+						chat.channel.sendText('성공했습니다.');
+					} else {
+						chat.channel.sendText('실패했습니다.\n3회 더 시도합니다.');
+
+						for ( let i=0;i<3;i++ ) {
+							result = await chat.channel.kickMember(chat.sender);
+							if ( result ) {
+								chat.channel.sendText('성공했습니다.');
+								return;
+							}
+							await psleep(1000);
+						}
+						chat.channel.sendText('실패했습니다.');
+					}
+				}
+			} catch(err) {
+				consola.error(err);
+			}
+			return;
 		}
 
 		if ( M.isCmd(chat) ) {
 			cmd = commandList[chat.cmd];
 			if ( cmd ) {
                 consola.info(`명령어 [${chat.cmd}] 를 실행합니다.`);
-				result = M.runCmd(cmd, chat, senderInfo, client);
+				result = M.runCmd(cmd, chat);
 				if ( result ) {
 					if ( typeof result === "string" ) {
 						chat.channel.sendText(result);
@@ -451,11 +386,9 @@ const chatRecord = (sender, chat) => {
 
             let result = "";
 
-			/*
             deep.forEach(d => {
                 result += `${d.pos}: ${d.val}\n`;
             });
-			*/
 
             result += answer;
 
@@ -473,29 +406,13 @@ const chatRecord = (sender, chat) => {
 
 		const feed = chat.getFeed();
         if ( feed.feedType === kakao.FeedType.OPENLINK_JOIN ) {
-			const member = feed.members[0];
-			const senderInfo = chat.Channel.getUserInfoId(member.userId);
-			const senderStruct = senderInfo.memberStruct;
-            client.emit('join', chat.channel, senderStruct);
+            client.emit('join', chat.channel, feed.members[0]);
         }
     });
 
 	client.on('join', (channel, user) => {
-		const chid = channel.id.toString();
-        consola.info(`${channel.openLink.linkStruct.linkName} (${chid}) 에 ${user.nickName} (${user.userId.toString()}) 님이 입장했습니다.`);
+        consola.info(`${channel.openLink.linkStruct.linkName} (${channel.id.toString()}) 에 ${user.nickName} (${user.userId.toString()}) 님이 입장했습니다.`);
 
-		const room = channel.openLink.linkStruct.linkName;
-		global.kaling.send(room, {
-			template_id: 49971,
-			template_args: {
-				//user: sender.memberStruct.nickname,
-				'THU': user.profileImageUrl,
-				'THN': user.nickname,
-				'ROOM': room,
-			},
-		});
-
-		/*
 		const attachment = Kaling({
 			type: kakao.CustomType.FEED,
 			title: `${user.nickName}님 환영합니다!`,
@@ -506,17 +423,12 @@ const chatRecord = (sender, chat) => {
 				{
 					title: '공지 확인하기',
 					dpType: kakao.CustomButtonDisplayType.ALL,
-					link: `kakaomoim://post?referer=b&chat_id=${chid}&post_id=${config.notice[chid]}`,
+					link: `kakaomoim://post?referer=b&chat_id=${config.notice.room}&post_id=${config.notice.id}`,
 				},
 				{
 					title: '홈페이지 방문하기',
 					dpType: kakao.CustomButtonDisplayType.ALL,
 					link: 'https://sopia-bot.github.io/',
-				},
-				{
-					title: '노션 페이지는 여기',
-					dpType: kakao.CustomButtonDisplayType.ALL,
-					link: 'https://www.notion.so/cfddd1655efc4801bfb407dc4af0cd98',
 				},
 				{
 					title: '개발자 블로그',
@@ -532,6 +444,5 @@ const chatRecord = (sender, chat) => {
 			],
 		});
 		channel.sendTemplate(attachment);
-		*/
 	});
 })();

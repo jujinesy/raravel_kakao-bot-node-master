@@ -15,16 +15,14 @@
 		"consola": "^2.14.0",
 		"forever": "^3.0.2",
 		"global": "^4.4.0",
-		"got": "^11.8.1",
 		"json-proxy-mapper": "^1.1.2",
-		"kaling.js": "^1.0.3",
 		"lossless-json": "^1.0.4",
 		"node-forge": "^0.9.1",
 		"node-kakao": "^3.1.2",
 		"nodemailer": "^6.4.11",
 		"request": "^2.88.2",
 		"request-promise": "^4.2.5",
-		"sopia-core": "^1.5.4",
+		"sopia-core": "^1.2.2",
 		"uuid": "^8.2.0"
 	}
 }

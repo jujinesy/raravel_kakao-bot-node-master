@@ -21,21 +21,18 @@ const createKaling = (options, json = false) => {
 
 	if ( options.buttons ) {
 		for ( btn of options.buttons ) {
-			if ( typeof btn.link === 'string' ) {
-				btn.link = {
-					'LPC':btn.link,
-					'LMO':btn.link,
-					'LCA':btn.link,
-					'LCI':btn.link,
-				};
-			}
 			btns.push({
 				'BU': {
 					'T':  btn.title,
 					'SR': btn.dpType,
 					'SNM': 'SOPIA',
 				},
-				'L': btn.link,
+				'L': {
+					'LPC':btn.link,
+					'LMO':btn.link,
+					'LCA':btn.link,
+					'LCI':btn.link,
+				},
 			});
 		}
 	}

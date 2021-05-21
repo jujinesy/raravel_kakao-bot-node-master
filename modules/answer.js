@@ -36,20 +36,6 @@ const answerList = [
 					},
 				],
 			},
-			{
-				"key": "diffrent",
-				"sub-answer": [
-					{
-						"key": "user",
-						"sub-answer": [
-							{
-								"key": "assign",
-								"answer": "시리얼 번호 및 고유닉네임이 다르기 때문입니다. 고유닉네임엔 @가 포함되지 않아야 하며, 대소문자가 정확해야 하고 앞 뒤 공백이 들어가는 상황이 많으니 다시 확인해 주세요.",
-							},
-						],
-					},
-				],
-			},
 		],
 	}, // serial
 	{
@@ -99,20 +85,6 @@ const answerList = [
 			},
 		],
 	}, // event
-	{
-		"key": "google",
-		"sub-answer": [
-			{
-				"key": "login",
-				"sub-answer": [
-					{
-						"key": "none-safe",
-						"answer": "저런, 구글 로그인이 되지 않아 속상하시겠네요.\n아쉽게도 지금은 소피아가 해당 문제를 해결할 수 없습니다. 아래 두 해결방안을 참고해 주세요.\n\n\n1. https://blog.naver.com/daninging/221865278882\n    - 위 블로그를 참고해 로그인이 될 수 있도록 시도해 봅니다.\n\n2. 핸드폰 스푼 앱에서 구글계정을 전화번호, 또는 이메일과 연동시킨 후 소피아에서 연동한 계정으로 로그인합니다.",
-					},
-				],
-			},
-		],
-	}, // google
 ];
 
 const searchAnswer = (deep, list = answerList, level = 0) => {
@@ -129,7 +101,7 @@ const searchAnswer = (deep, list = answerList, level = 0) => {
 		const obj = list[idx];
 
 		if ( obj['answer'] ) {
-			answer += `${obj['answer']}`;
+			answer += `\n\n${obj['answer']}`;
 		} else if ( typeof obj['sub-answer'] === "object" ) {
 			const deepDump = [];
 			for ( const d of deep ) {

@@ -73,26 +73,6 @@ const indentList = [
                     },
                 ],
             },
-			{
-				"key": "diffrent",
-				"pos": "adjective",
-				"indent": [ "다른" ],
-				"sub-indent": [
-					{
-						"key": "user",
-						"pos": "verb",
-						"indent": [ "유저", "사람" ],
-						"sub-indnet": [
-							{
-								"key": "assign",
-								"pos": "verb",
-								"indent": [ "할당", "사용" ],
-								"finish": true,
-							},
-						],
-					},
-				],
-			},
         ],
     }, // serial
     {
@@ -161,26 +141,6 @@ const indentList = [
             },
         ],
     },
-	{
-		"key": "google",
-		"pos": "subject",
-		"indent": ["google", "구글", "GOOGLE", "Google"],
-		"sub-indent": [
-			{
-				"key": "login",
-				"pos": "subject",
-				"indent": ["로그인", "login", "Login"],
-				"sub-indent": [
-					{
-						"key": "none-safe",
-						"pos": "adjective",
-						"indent": ["안전하지"],
-						"finish": true,
-					},
-				],
-			},
-		],
-	}, // google
 ];
 
 const searchIndent = (msg, indent = indentList, deep = []) => {

@@ -13,20 +13,16 @@ exports.isAdmin = (chat, sender) => {
 		}
 
 		let roomAdminId = {};
-		if ( chat.channel ) {
-			chat.channel.client.openChatManager.getLinkOwner(chat.channel.linkId)
-				.then(chatUser => {
-					roomAdminId = chatUser.id;
-					if (roomAdminId.toString() === senderId.toString() ) {
-						resolve();
-					} else {
-						reject(new Error('not match admin id'));
-					}
-				})
-				.catch(reject);
-		} else {
-			reject();
-		}
+		chat.channel.client.openChatManager.getLinkOwner(chat.channel.linkId)
+			.then(chatUser => {
+				roomAdminId = chatUser.id;
+				if (roomAdminId.toString() === senderId.toString() ) {
+					resolve();
+				} else {
+					reject(new Error('not match admin id'));
+				}
+			})
+			.catch(reject);
 	});
 }
 
@@ -45,14 +41,14 @@ exports.isCmd = (e) => {
 };
 
 
-exports.runCmd = (cmd, ...e) => {
+exports.runCmd = (cmd, e) => {
     let str = "";
     switch ( typeof cmd ) {
         case "string": {
             str = cmd;
         } break;
         case "function": {
-            str = cmd(...e);
+            str = cmd(e);
         } break;
         case "object": {
             if ( Array.isArray(cmd) ) {
@@ -62,7 +58,7 @@ exports.runCmd = (cmd, ...e) => {
                         str = cmd[result];
                     } break;
                     case "function": {
-                        str = cmd[result](...e);
+                        str = cmd[result](e);
                     }
                 }
             }
